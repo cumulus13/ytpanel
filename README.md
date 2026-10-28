@@ -82,9 +82,6 @@ graph LR
     end
     class CR_Text label;
     class CR_Details label;
-
-    %% Styling for labels and text
-    class Browser Group,WebApp Group,LiveSpeed Group,Redis Group,Postgres Group,CTLWorker Group,DownloadsWorker Group,CoreRunner Group fill:none,stroke:none;
 ```
 
 [![Architecture](https://files.catbox.moe/muvrc6.jpg)](https://files.catbox.moe/muvrc6.jpg)
