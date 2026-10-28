@@ -1,0 +1,9 @@
+Django>=5.1,<7
+celery>=5.4,<6
+redis>=5.0
+psycopg[binary]>=3.2
+gunicorn>=22.0
+whitenoise>=6.7
+# [default] = recommended extras (incl. yt-dlp-ejs, needed for YouTube); [deno] = a JS runtime from PyPI.
+# YouTube changes often: keep this one current (pip install -U yt-dlp).
+yt-dlp[default,deno]>=2026.1.1

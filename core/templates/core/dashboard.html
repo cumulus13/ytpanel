@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}ytpanel{% endblock %}
+{% block content %}
+{{ config|json_script:"cfg" }}
+<section class="stats" id="stats">
+  <div class="stat"><b id="n-running">0</b><span>running</span></div>
+  <div class="stat"><b id="n-queued">0</b><span>queued</span></div>
+  <div class="stat"><b id="n-retrying">0</b><span>retrying</span></div>
+  <div class="stat"><b id="n-paused">0</b><span>paused</span></div>
+  <div class="stat"><b id="n-completed">0</b><span>completed</span></div>
+  <div class="stat"><b id="n-failed">0</b><span>failed</span></div>
+  <div class="stat wide"><b id="speed">0 B/s</b><span>total speed</span></div>
+</section>
+
+<section class="card">
+  <canvas id="graph" height="120" aria-label="speed graph"></canvas>
+</section>
+
+<section class="card">
+  <h2>Add downloads</h2>
+  <form id="add-form" class="grid">
+    <div class="field full"><label for="urls">URLs (one per line &mdash; video pages, any site yt-dlp supports)</label>
+      <textarea id="urls" rows="3" placeholder="https://..." required></textarea></div>
+    <div class="field"><label for="format">Format</label>
+      <select id="format"></select>
+      <input id="format-custom" placeholder="yt-dlp format selector" hidden></div>
+    <div class="field"><label for="retries">Auto retry</label>
+      <div class="row"><input id="retries" type="number" min="0" max="1000000" value="5">
+        <label class="chk"><input type="checkbox" id="retries-inf"> &infin; always</label></div>
+      <small>failures retry with exponential backoff; permanent errors (404, private, removed) stop at once unless enabled in Settings</small></div>
+    <div class="field"><label for="ratelimit">Rate limit (KiB/s, 0 = default)</label><input id="ratelimit" type="number" min="0" value="0"></div>
+    <div class="field"><label for="outdir">Folder</label><select id="outdir"></select></div>
+    <div class="field"><label for="startat">Start at (optional)</label><input id="startat" type="datetime-local"></div>
+    <div class="field full"><button class="primary" id="add-btn">Add to queue</button> <span id="add-msg" class="muted"></span></div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="row between"><h2>Downloads</h2><span class="muted" id="trunc"></span></div>
+  <div class="scroll">
+  <table id="tbl">
+    <thead><tr><th>#</th><th>Title</th><th>Status</th><th>Progress</th><th>Speed</th><th>Retries</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <p class="muted" id="empty" hidden>Nothing here yet.</p>
+</section>
+
+<section class="card">
+  <h2>Purge</h2>
+  <p class="muted">Removes finished entries from the list and always deletes their leftover partial files
+    (<code>.part</code>, <code>.ytdl</code>, fragments). Running / queued / paused downloads are never touched.</p>
+  <div class="row wrap">
+    <label class="chk"><input type="checkbox" class="pst" value="completed" checked> completed</label>
+    <label class="chk"><input type="checkbox" class="pst" value="failed" checked> failed</label>
+    <label class="chk"><input type="checkbox" class="pst" value="cancelled" checked> cancelled</label>
+    <label>older than <input id="purge-days" type="number" min="0" placeholder="any" class="short"> days</label>
+    <label class="chk"><input type="checkbox" id="purge-files"> also delete downloaded files</label>
+    {% if user.is_staff %}<label class="chk"><input type="checkbox" id="purge-all"> all users</label>{% endif %}
+    <button type="button" id="purge-preview">Preview</button>
+    <button type="button" id="purge-go" class="danger">Purge</button>
+  </div>
+  <p id="purge-msg" class="muted"></p>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'core/app.js' %}"></script>{% endblock %}

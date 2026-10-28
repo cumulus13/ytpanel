@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block title %}Sign in · ytpanel{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <form method="post">{% csrf_token %}
+    {% if form.errors %}<p class="err">Wrong username or password.</p>{% endif %}
+    <label>Username <input name="username" autofocus autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="primary">Sign in</button>
+  </form>
+</section>
+{% endblock %}
