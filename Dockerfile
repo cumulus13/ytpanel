@@ -6,9 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN useradd -m -u 1000 app && mkdir -p /data/downloads && chown -R app /data /app
+RUN useradd -m -u 1000 app && mkdir -p /downloads && chown -R app /data /app /downloads
 USER app
-ENV YTP_DOWNLOAD_ROOT=/data/downloads
+ENV YTP_DOWNLOAD_ROOT=/downloads
 # `deno` (pip extra) installs its binary under the user's home; yt-dlp finds it on PATH
 ENV PATH="/home/app/.local/bin:${PATH}"
 EXPOSE 8000
