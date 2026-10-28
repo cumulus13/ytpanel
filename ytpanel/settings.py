@@ -3,21 +3,19 @@ import os
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-
+from envdot import load_env
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+ENV_FILE = BASE_DIR / '.env'
+load_env(ENV_FILE)
 
 def env_bool(name, default=False):
-    val = os.environ.get(name)
-    if val is None:
-        return default
-    return val.strip().lower() in ("1", "true", "yes", "on")
+    return os.getenv(name, default)
 
 
-def env_list(name, default=""):
-    return [x.strip() for x in os.environ.get(name, default).split(",") if x.strip()]
+def env_list(name, default=[], cast_type=list):
+    return os.getenv(name, default, cast_type=cast_type)
 
 
 DEBUG = env_bool("DJANGO_DEBUG", False)
