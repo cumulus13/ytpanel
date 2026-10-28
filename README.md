@@ -16,6 +16,77 @@ browser ─HTTP/JSON─► web (Django+gunicorn) ─► PostgreSQL (queue, setti
                                                        └─ yt-dlp Python API, progress as JSON lines
 ```
 
+```mermaid
+graph LR
+    classDef plain fill:#fff,stroke:#333,stroke-width:2px;
+    classDef icon fill:#f9f9f9,stroke:#333,stroke-width:1px,rx:5,ry:5;
+    classDef label fill:none,stroke:none,font-weight:bold;
+
+    %% Components
+    B_Icon[<img src='https://via.placeholder.com/50' width='50'/>] -->|HTTP/JSON| WA_Icon;
+    WA_Icon[<img src='https://via.placeholder.com/50' width='50'/>] -->|Live Data| LS_Icon;
+    WA_Icon --> PG_Icon;
+    LS_Icon[<img src='https://via.placeholder.com/50' width='50'/>] --> LS_Text;
+    Redis_Icon[<img src='https://via.placeholder.com/50' width='50'/>] <-->|BEAT| CW_Icon;
+    PG_Icon[<img src='https://via.placeholder.com/50' width='50'/>] --> PG_Text;
+    CW_Icon[<img src='https://via.placeholder.com/50' width='50'/>] --> CW_Text;
+    CW_Text -->|CELERY TASK<br/>PER DOWNLOAD| DW_Icon;
+    DW_Icon[<img src='https://via.placeholder.com/50' width='50'/>] -->|SPAWNS| CR_Text;
+    CR_Text[CORE/RUNNER.PY<br/>one process group per download] -->|yt-dlp Python API,<br/>progress as JSON lines| CR_Details;
+
+    %% Component Groups
+    subgraph Browser Group
+        B_Icon[BROWSER]
+    end
+    class B_Icon icon;
+
+    subgraph WebApp Group
+        WA_Icon[Web App<br/>DJANGO +<br/>GUNICORN]
+    end
+    class WA_Icon icon;
+
+    subgraph LiveSpeed Group
+        LS_Icon[Live Speed]
+        LS_Text[queue, settings, history]
+    end
+    class LS_Icon icon;
+    class LS_Text label;
+
+    subgraph Redis Group
+        Redis_Icon[Redis]
+    end
+    class Redis_Icon icon;
+
+    subgraph Postgres Group
+        PG_Icon[POSTGRESQL]
+        PG_Text[queue, settings, history]
+    end
+    class PG_Icon icon;
+    class PG_Text label;
+
+    subgraph CTLWorker Group
+        CW_Icon[CTL<br/>WORKER]
+        CW_Text[tick 2s,<br/>reaper, auto-purge]
+    end
+    class CW_Icon icon;
+    class CW_Text label;
+
+    subgraph DownloadsWorker Group
+        DW_Icon[DOWNLOADS<br/>WORKER]
+    end
+    class DW_Icon icon;
+
+    subgraph CoreRunner Group
+        CR_Text
+        CR_Details
+    end
+    class CR_Text label;
+    class CR_Details label;
+
+    %% Styling for labels and text
+    class Browser Group,WebApp Group,LiveSpeed Group,Redis Group,Postgres Group,CTLWorker Group,DownloadsWorker Group,CoreRunner Group fill:none,stroke:none;
+```
+
 [![Architecture](https://files.catbox.moe/muvrc6.jpg)](https://files.catbox.moe/muvrc6.jpg)
 
 ## Quick start
