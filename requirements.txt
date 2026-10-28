@@ -7,4 +7,12 @@ whitenoise>=6.7
 # [default] = recommended extras (incl. yt-dlp-ejs, needed for YouTube); [deno] = a JS runtime from PyPI.
 # YouTube changes often: keep this one current (pip install -U yt-dlp).
 yt-dlp[default,deno]>=2026.1.1
+gntp==1.0.3
+rich
 envdot
+colorlog
+git+https://github.com/cumulus13/pydebugger2
+git+https://github.com/cumulus13/pika
+tenacity
+amqp
+pika

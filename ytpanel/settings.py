@@ -21,7 +21,7 @@ def env_list(name, default=[], cast_type=list):
 DEBUG = env_bool("DJANGO_DEBUG", False)
 TESTING = "test" in sys.argv
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if DEBUG or TESTING:
         SECRET_KEY = "insecure-dev-key-do-not-use-in-production"
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "logs"
 ]
 
 MIDDLEWARE = [
@@ -68,7 +69,7 @@ TEMPLATES = [{
 
 
 def _database():
-    url = os.environ.get("DATABASE_URL", "")
+    url = os.getenv("DATABASE_URL", "")
     if not url:
         return {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3",
                 "OPTIONS": {"timeout": 30}}
@@ -91,14 +92,14 @@ DATABASES = {"default": _database()}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Redis is used for the live speed/progress numbers (Django cache) and as the Celery broker.
-REDIS_URL = os.environ.get("TEST_REDIS_URL", "") if TESTING else os.environ.get("REDIS_URL", "")
+REDIS_URL = os.getenv("TEST_REDIS_URL", "") if TESTING else os.getenv("REDIS_URL", "")
 if REDIS_URL:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache",
                           "LOCATION": REDIS_URL, "KEY_PREFIX": "ytpanel"}}
 else:  # dev / tests without Redis: single process only
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL or "memory://")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL or "memory://")
 CELERY_TASK_DEFAULT_QUEUE = "celery"
 CELERY_TASK_ROUTES = {"core.tasks.run_download_task": {"queue": "downloads"}}
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
@@ -145,16 +146,96 @@ if env_bool("DJANGO_BEHIND_TLS_PROXY", False):
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 
 # ---- ytpanel -------------------------------------------------------------------------------
-YTP_DOWNLOAD_ROOT = Path(os.environ.get("YTP_DOWNLOAD_ROOT", BASE_DIR / "downloads"))
-YTP_HEARTBEAT_GRACE = int(os.environ.get("YTP_HEARTBEAT_GRACE", "60"))   # seconds
-YTP_CHECKPOINT_INTERVAL = float(os.environ.get("YTP_CHECKPOINT_INTERVAL", "5"))
-YTP_INNER_RETRIES = int(os.environ.get("YTP_INNER_RETRIES", "3"))        # library-level retries
-YTP_RUNNER_PYTHON = os.environ.get("YTP_RUNNER_PYTHON", sys.executable)
+YTP_DOWNLOAD_ROOT = Path(os.getenv("YTP_DOWNLOAD_ROOT", BASE_DIR / "downloads"))
+YTP_HEARTBEAT_GRACE = int(os.getenv("YTP_HEARTBEAT_GRACE", "60"))   # seconds
+YTP_CHECKPOINT_INTERVAL = float(os.getenv("YTP_CHECKPOINT_INTERVAL", "5"))
+YTP_INNER_RETRIES = int(os.getenv("YTP_INNER_RETRIES", "3"))        # library-level retries
+YTP_RUNNER_PYTHON = os.getenv("YTP_RUNNER_PYTHON", sys.executable)
 YTP_MAX_LIST = 500
 
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "handlers": {"console": {"class": "logging.StreamHandler"}},
+#     "root": {"handlers": ["console"], "level": os.getenv("YTP_LOG_LEVEL", "INFO")},
+# }
+
+
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": os.environ.get("YTP_LOG_LEVEL", "INFO")},
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'colored_verbose': {
+            '()': 'colorlog.ColoredFormatter',
+            'format': "%(log_color)s%(levelname)-8s%(red)s%(module)-30s%(reset)s %(blue)s%(message)s"
+        },
+        'verbose': {
+            'format': '%(asctime)s [PID:%(process)d] [TID:%(thread)d] [%(filename)s:%(lineno)d] %(levelname)s %(message)s',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': os.getenv("HANDLER_FILE_LOG_LEVEL", 'ERROR'),
+            'class': 'logging.FileHandler',
+            'filename': LOG_FILE,
+        },
+        'console': {
+            'level': os.getenv("HANDLER_CONSOLE_LOG_LEVEL", 'INFO'),
+            'class':'rich.logging.RichHandler',
+        },
+        'colored_console': {
+            'level': os.getenv("HANDLER_COLORED_CONSOLE_LOG_LEVEL", 'INFO'),
+            'class': 'logging.StreamHandler',
+            'formatter': 'colored_verbose'
+        },
+        'syslog': {
+            #'class': 'logging.handlers.SysLogHandler',
+            'class': 'logs.handler.SysLogTextHandler',
+            'address': (env("SYSLOG_PROXY_HOST", '222.222.222.7'), env("SYSLOG_PROXY_PORT", 514)),
+            'formatter': env('DJANGO_SYSLOG_PROXY_LOG_FORMAT', 'verbose'),
+            "env": env('DJANGO_SYSLOG_PROXY_LOG_ENV', "production"),
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': os.getenv("LOGGER_DJANGO_LOG_LEVEL", 'INFO'),
+            'propagate': True,
+            },
+        'gunicorn.error': {
+            'handlers': ['console', 'syslog'],
+            'level': os.getenv("LOGGER_GUNICORN_ERROR_LOG_LEVEL", 'ERROR'),
+            'propagate': True,
+        },
+        'gunicorn.access': {
+            'handlers': ['console', 'syslog'],
+            'level': os.getenv("LOGGER_GUNICORN_ACCESS_LOG_LEVEL", 'WARNING'),
+            'propagate': False,
+        },
+        "root": {
+            "handlers": ["console", 'syslog'], 
+            "level": env("DJANGO_LOG_LEVEL", str(env("LOG_LEVEL", "INFO")).upper())
+        },
+        'celery': {
+            'handlers': ['console', 'file', 'syslog'], 
+            'level': 'WARNING', 
+            'propagate': False, 
+        },        
+        'celery.worker': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'celery.task': {
+            'handlers': ['console'],
+            'level': 'WARNING', 
+            'propagate': False,
+        },
+        'celery.beat': {
+            'handlers': ['console'],
+            'level': 'WARNING', 
+            'propagate': False,
+        }
+    }
 }
+
