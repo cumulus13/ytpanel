@@ -29,7 +29,7 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set (see .env.example)")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS") or ['http://127.0.0.1:8000', 'http://127.0.0.1:7788']
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -160,6 +160,10 @@ YTP_MAX_LIST = 500
 #     "root": {"handlers": ["console"], "level": os.getenv("YTP_LOG_LEVEL", "INFO")},
 # }
 
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, os.getenv('DJANGO_LOG_FILE_PATH', 'debug.log'))
+
 
 LOGGING = {
     'version': 1,
@@ -191,9 +195,9 @@ LOGGING = {
         'syslog': {
             #'class': 'logging.handlers.SysLogHandler',
             'class': 'logs.handler.SysLogTextHandler',
-            'address': (env("SYSLOG_PROXY_HOST", '222.222.222.7'), env("SYSLOG_PROXY_PORT", 514)),
-            'formatter': env('DJANGO_SYSLOG_PROXY_LOG_FORMAT', 'verbose'),
-            "env": env('DJANGO_SYSLOG_PROXY_LOG_ENV', "production"),
+            'address': (os.getenv("SYSLOG_PROXY_HOST", '222.222.222.7'), os.getenv("SYSLOG_PROXY_PORT", 514)),
+            'formatter': os.getenv('DJANGO_SYSLOG_PROXY_LOG_FORMAT', 'verbose'),
+            "env": os.getenv('DJANGO_SYSLOG_PROXY_LOG_ENV', "production"),
         },
     },
     'loggers': {
@@ -214,7 +218,7 @@ LOGGING = {
         },
         "root": {
             "handlers": ["console", 'syslog'], 
-            "level": env("DJANGO_LOG_LEVEL", str(env("LOG_LEVEL", "INFO")).upper())
+            "level": os.getenv("DJANGO_LOG_LEVEL", str(os.getenv("LOG_LEVEL", "INFO")).upper())
         },
         'celery': {
             'handlers': ['console', 'file', 'syslog'], 
